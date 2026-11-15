@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package requestfilter
 
 import (
-	"crypto/sha256"
 	"errors"
 	"fmt"
 
@@ -140,7 +139,6 @@ func (sf *SigFilter) Update(config FilterConfig) error {
 
 var (
 	errMissingNonce     = errors.New("missing nonce in signature header")
-	errInvalidTxID      = errors.New("invalid tx id")
 	errMissingChannelID = errors.New("missing channel id in channel header")
 	errWrongChannelID   = errors.New("wrong channel id in channel header")
 )
@@ -148,16 +146,9 @@ var (
 // verifyTxID checks that the signature header carries a nonce, and that the channel header's TxId
 // is the one derived from the signature header's nonce and creator.
 // It returns constant errors, so a rejected request does not echo its (unbounded) TxID into errors and logs.
-// It rejects a TxID of the wrong length before calling protoutil.CheckTxID, which formats the TxID into its error.
 func verifyTxID(chdr *common.ChannelHeader, shdr *common.SignatureHeader) error {
 	if len(shdr.GetNonce()) == 0 {
 		return errMissingNonce
 	}
-	if len(chdr.GetTxId()) != 2*sha256.Size {
-		return errInvalidTxID
-	}
-	if protoutil.CheckTxID(chdr.GetTxId(), shdr.GetNonce(), shdr.GetCreator()) != nil {
-		return errInvalidTxID
-	}
-	return nil
+	return protoutil.CheckTxID(chdr.GetTxId(), shdr.GetNonce(), shdr.GetCreator())
 }
